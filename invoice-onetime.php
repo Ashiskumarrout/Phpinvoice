@@ -22,10 +22,12 @@ $result = $stmt->get_result();
 if (!$row = $result->fetch_assoc()) exit("Invoice not found.");
 
 // Prepare fields
+$invoiceNo = htmlspecialchars($row['invoice_no'] ?: 'INV-' . str_pad($row['id'], 5, '0', STR_PAD_LEFT));
 $clientName = htmlspecialchars($row['company_name']);
 $clientAddress = nl2br(htmlspecialchars($row['address']));
 $date = htmlspecialchars($row['bill_date']);
 $description = nl2br(htmlspecialchars($row['description']));
+$remarks = !empty($row['remarks']) ? nl2br(htmlspecialchars($row['remarks'])) : 'None';
 $amount = number_format($row['amount'], 2);
 $gst = $row['apply_gst'] ? number_format($row['gst'], 2) : "0.00";
 $gstAmount = $row['apply_gst'] ? number_format($row['amount'] * $row['gst'] / 100, 2) : "0.00";
@@ -47,10 +49,10 @@ if ($showExtra && isset($row['estimated_value'])) {
     $remaining = "₹" . number_format($remainingAmt, 2);
 }
 
-// Encode background logo
-$bgPath = 'companylogo.jpg'; // Replace with your correct image path
+// Background logo
+$bgPath = 'companylogo.jpg';
 $backgroundImage = file_exists($bgPath) ? base64_encode(file_get_contents($bgPath)) : '';
-$bgStyle = $backgroundImage ? "background: url('data:image/jpeg;base64,{$backgroundImage}') no-repeat center center fixed; background-size: cover;" : '';
+$bgStyle = $backgroundImage ? "background: url('data:image/jpeg;base64,{$backgroundImage}') no-repeat center center; background-size: cover;" : '';
 
 // Header logo
 $logo = '';
@@ -66,10 +68,10 @@ $html = "
   @page { margin: 20px; }
   body { font-family: Arial, sans-serif; color: #333; padding: 20px; {$bgStyle} }
   .header { display: flex; justify-content: space-between; align-items: center; }
-  .header h2 { flex: 1; text-align: center; color: #4A148C; margin: 0; }
-  .client-info { margin-top: 20px; }
+  .header h2 { flex: 1; text-align: center; color: #4A148C; margin: 0; font-size: 24px; }
+  .client-info { background: #f9f9f9; padding: 10px; border-radius: 8px; margin-top: 20px; }
   .client-info p { margin: 4px 0; font-size: 14px; }
-  table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; border-radius: 6px; overflow: hidden; }
   th, td { border: 1px solid #ddd; padding: 10px; }
   th { background-color: #f0f0f0; text-align: left; }
   .total { font-size: 16px; font-weight: bold; text-align: right; margin-top: 20px; }
@@ -82,6 +84,7 @@ $html = "
 </div>
 
 <div class='client-info'>
+  <p><strong>Invoice No:</strong> {$invoiceNo}</p>
   <p><strong>Client:</strong> {$clientName}</p>
   <p><strong>Address:</strong> {$clientAddress}</p>
   <p><strong>Bill Date:</strong> {$date}</p>
@@ -101,7 +104,8 @@ $html .= "
   <tr><th>Description</th><td>{$description}</td></tr>
   <tr><th>Base Amount Paid</th><td>₹{$amount}</td></tr>
   <tr><th>GST</th><td>" . ($row['apply_gst'] ? "₹{$gstAmount} ({$gst}%)" : "Not Applied") . "</td></tr>
-  <tr><th>Total Billed Amount</th><td><strong>₹{$total}</strong></td></tr>";
+  <tr><th>Total Billed Amount</th><td><strong>₹{$total}</strong></td></tr>
+  <tr><th>Remarks</th><td>{$remarks}</td></tr>";
 
 if ($showExtra) {
   $html .= "<tr><th>Remaining Amount</th><td>{$remaining}</td></tr>";
