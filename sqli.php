@@ -28,7 +28,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 }
 ?>
-
+<div>
+    <img src="comany logo .jpg" alt="">
+</div>
 <form method="post">
     <label>👤 Username:</label><br>
     <input type="text" name="username"><br><br>

@@ -6,9 +6,12 @@ if (!isset($_SESSION['user'])) {
     exit;
 }
 
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
 $clients = $conn->query("SELECT id, company_name FROM clients");
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $client_id = $_POST['client_id'];
     $project_type = $_POST['project_type'] === 'one_time' ? 'One Time' : 'Recurring';
     $description = '';
@@ -17,15 +20,27 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $apply_gst = ($gst == 18) ? 1 : 0;
     $total = 0;
     $estimated = 0;
-    $bill_date = date('Y-m-d');
+
+    // Safe bill date handling
+    if ($project_type === 'One Time') {
+        $bill_date = $_POST['one_time_bill_date'] ?? '';
+    } else {
+        $bill_date = $_POST['recurring_bill_date'] ?? '';
+    }
+
+    if (empty($bill_date)) {
+        $bill_date = date('Y-m-d');
+    }
+
     $payment_type = $_POST['payment_type'] ?? null;
     $payment_mode = $_POST['payment_mode'] ?? ($_POST['recurring_mode'] ?? null);
-    // $next_payment_date = $_POST['next_payment'] ?? $_POST['recurring_next_payment'] ?? null;
-    $next_payment_raw = $_POST['next_payment'] ?? $_POST['recurring_next_payment'] ?? '';
-$next_payment_date = !empty($next_payment_raw) ? $next_payment_raw : null;
+    $next_payment_date = $_POST['next_payment'] ?? $_POST['recurring_next_payment'] ?? null;
 
-    $logoPath = null;
+    if ($next_payment_date === '') {
+        $next_payment_date = null;
+    }
 
+    $logoPath = 'uploads/default_logo.png';
     if (!empty($_FILES['company_logo']['name'])) {
         $targetDir = "uploads/";
         if (!is_dir($targetDir)) mkdir($targetDir, 0777, true);
@@ -36,15 +51,14 @@ $next_payment_date = !empty($next_payment_raw) ? $next_payment_raw : null;
         }
     }
 
-    if ($project_type == 'One Time') {
+    if ($project_type === 'One Time') {
         $description = $_POST['description'];
         $amount = floatval($_POST['amount']);
         $estimated = floatval($_POST['estimated_value']);
         $total = $amount + ($apply_gst ? ($amount * $gst / 100) : 0);
-    } elseif ($project_type == 'Recurring') {
+    } else {
         $description = $_POST['recurring_description'];
         $amount = floatval($_POST['recurring_amount']);
-        $bill_date = $_POST['bill_date'];
         $total = $amount + ($apply_gst ? ($amount * $gst / 100) : 0);
         $payment_type = null;
     }
@@ -52,6 +66,10 @@ $next_payment_date = !empty($next_payment_raw) ? $next_payment_raw : null;
     $stmt = $conn->prepare("INSERT INTO bills 
         (client_id, bill_date, amount, gst, total, description, project_type, logo, apply_gst, payment_type, payment_mode, next_payment_date) 
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+
+    if (!$stmt) {
+        die("<div style='color:red;'>❌ Prepare failed: " . $conn->error . "</div>");
+    }
 
     $stmt->bind_param(
         "isdddsssisss",
@@ -70,14 +88,13 @@ $next_payment_date = !empty($next_payment_raw) ? $next_payment_raw : null;
     );
 
     if ($stmt->execute()) {
-        echo "<script>alert('✅ Bill created successfully'); location.href='bill-history.php';</script>";
+        echo "<script>alert('✅ Bill created successfully'); window.location.href='bill-history.php';</script>";
         exit;
     } else {
-        echo "<script>alert('❌ Error saving bill: " . $stmt->error . "');</script>";
+        echo "<div style='color:red; font-weight:bold;'>❌ Error saving bill: " . $stmt->error . "</div>";
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -122,6 +139,7 @@ $next_payment_date = !empty($next_payment_raw) ? $next_payment_raw : null;
     <div class="form-container">
       <h2 class="text-center mb-4">➕ Add New Bill</h2>
       <form method="post" enctype="multipart/form-data">
+
         <div class="form-group">
           <label>Client</label>
           <select name="client_id" class="form-control" required>
@@ -139,12 +157,13 @@ $next_payment_date = !empty($next_payment_raw) ? $next_payment_raw : null;
           </select>
         </div>
 
+        <div class="form-group text-center">
+          <label>Company Logo (Fixed)</label><br>
+          <img src="uploads/1752152956_poertfoli1.png" alt="Logo" style="max-height: 80px;">
+        </div>
+
         <!-- One Time -->
         <div id="one_time_fields" class="hidden">
-          <div class="form-group">
-            <label>Company Logo</label>
-            <input type="file" name="company_logo" class="form-control">
-          </div>
           <div class="form-group">
             <label><input type="checkbox" id="apply_gst"> Apply GST (18%)</label>
             <input type="hidden" name="gst" id="gst_input" value="0">
@@ -183,7 +202,7 @@ $next_payment_date = !empty($next_payment_raw) ? $next_payment_raw : null;
           </div>
           <div class="form-group">
             <label>Estimate Next Payment Date</label>
-            <input type="date" name="next_payment" class="form-control">
+            <input type="date" name="one_time_bill_date" class="form-control">
           </div>
         </div>
 
@@ -195,11 +214,7 @@ $next_payment_date = !empty($next_payment_raw) ? $next_payment_raw : null;
           </div>
           <div class="form-group">
             <label>Bill Date</label>
-            <input type="date" name="bill_date" class="form-control">
-          </div>
-          <div class="form-group">
-            <label>Company Logo (optional)</label>
-            <input type="file" name="company_logo" class="form-control">
+            <input type="date" name="recurring_bill_date" class="form-control">
           </div>
           <div class="form-group">
             <label><input type="checkbox" id="recurring_gst_check"> Apply GST (18%)</label>
@@ -267,7 +282,10 @@ $next_payment_date = !empty($next_payment_raw) ? $next_payment_raw : null;
     function updateRemaining() {
       const est = parseFloat(estimated?.value) || 0;
       const paid = parseFloat(paidAmount?.value) || 0;
-      const remain = est - paid;
+      const gstVal = applyGstCheckbox.checked ? 18 : 0;
+      const gstAmount = (est * gstVal) / 100;
+      const total = est + gstAmount;
+      const remain = total - paid;
       if (remaining) remaining.value = remain.toFixed(2);
     }
 
@@ -282,7 +300,6 @@ $next_payment_date = !empty($next_payment_raw) ? $next_payment_raw : null;
     estimated?.addEventListener('input', updateRemaining);
     paidAmount?.addEventListener('input', updateRemaining);
     recurringAmountInput?.addEventListener('input', updateRecurringTotal);
-    recurringGstCheck?.addEventListener('change', updateRecurringTotal);
   </script>
 </body>
 </html>
