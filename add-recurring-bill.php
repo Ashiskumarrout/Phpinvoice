@@ -3,31 +3,45 @@ include 'db.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 if (!isset($_SESSION['user'])) { header("Location: index.php"); exit; }
 
-// Fetch clients with all details
+// Fetch clients
 $clients = $conn->query("SELECT id, company_name, gst_number, address FROM clients");
 
-// Get next Invoice #
+// Invoice #
 $invoiceQuery = $conn->query("SHOW TABLE STATUS LIKE 'bills'");
 $invoiceRow = $invoiceQuery->fetch_assoc();
 $nextInvoiceNumber = $invoiceRow['Auto_increment'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $client_id = $_POST['client_id'];
-    $description = $_POST['recurring_description'];
-    $amount = floatval($_POST['recurring_amount']);
     $bill_date = $_POST['bill_date'] ?: date('Y-m-d');
     $next_payment_date = $_POST['next_payment'] ?: NULL;
     $payment_mode = $_POST['payment_mode'];
     $gst = isset($_POST['gst']) ? 18 : 0;
     $apply_gst = $gst ? 1 : 0;
 
-    $total = $amount + ($apply_gst ? ($amount * 18 / 100) : 0);
-    $logoPath = 'uploads/default_logo.png'; // Fixed logo
+    // Combine items
+    $descriptions = $_POST['item_desc'];
+    $amounts = $_POST['item_amount'];
+    $totalAmount = 0;
+    $itemDetails = [];
+
+    foreach ($amounts as $index => $amt) {
+        $amt = floatval($amt);
+        $desc = htmlspecialchars(trim($descriptions[$index]));
+        if ($amt > 0 && $desc != '') {
+            $itemDetails[] = $desc . " (" . number_format($amt, 2) . ")";
+            $totalAmount += $amt;
+        }
+    }
+
+    $description = implode(", ", $itemDetails);
+    $total = $totalAmount + ($apply_gst ? ($totalAmount * $gst / 100) : 0);
+    $logoPath = 'uploads/default_logo.png';
 
     $stmt = $conn->prepare("INSERT INTO bills 
         (client_id, bill_date, amount, gst, total, description, project_type, logo, apply_gst, payment_mode, next_payment_date) 
         VALUES (?, ?, ?, ?, ?, ?, 'Recurring', ?, ?, ?, ?)");
-    $stmt->bind_param("isdddssiss", $client_id, $bill_date, $amount, $gst, $total, $description, $logoPath, $apply_gst, $payment_mode, $next_payment_date);
+    $stmt->bind_param("isdddssiss", $client_id, $bill_date, $totalAmount, $gst, $total, $description, $logoPath, $apply_gst, $payment_mode, $next_payment_date);
 
     if ($stmt->execute()) {
         echo "<script>alert('✅ Recurring Bill Added'); window.location='bill-history.php';</script>";
@@ -48,10 +62,13 @@ body {margin:0;font-family:'Segoe UI';background:#f0f2f5;display:flex;}
 .sidebar a {color:white;display:block;padding:12px 0;text-decoration:none;font-weight:500;}
 .sidebar a:hover {background:#512da8;border-radius:6px;padding-left:12px;}
 .main-content {margin-left:250px;padding:40px;width:100%;}
-.form-container {background:white;padding:40px;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,0.1);max-width:850px;margin:auto;}
-.form-group {margin-bottom:20px;}
-label {font-weight:600;}
-#bill-to-box {background:#f9f9f9;padding:15px;border-radius:10px;margin-bottom:15px;border:1px solid #ccc;}
+.form-container {background:white;padding:30px;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,0.1);max-width:950px;margin:auto;}
+.item-row {display:flex;gap:10px;margin-bottom:10px;align-items:center;}
+.item-row textarea {flex:2;}
+.item-row input {flex:1;}
+.item-row button {background:#dc3545;border:none;color:white;border-radius:50%;width:36px;height:36px;font-size:18px;}
+.add-btn, .save-btn {background:#ffe082;border:none;padding:10px;font-weight:bold;border-radius:6px;width:100%;margin-top:10px;}
+.total-box {background:#f7f7f7;padding:15px;border-radius:8px;margin-top:15px;}
 </style>
 </head>
 <body>
@@ -75,59 +92,60 @@ label {font-weight:600;}
 <select name="client_id" id="client_id" class="form-control" required onchange="updateBillTo()">
 <option value="">Select Client</option>
 <?php
-$clientData = [];
 while($row=$clients->fetch_assoc()) {
-    $id = $row['id'];
-    $company = htmlspecialchars($row['company_name']);
-    $gst = htmlspecialchars($row['gst_number']);
-    $address = htmlspecialchars($row['address']);
-    echo "<option value='$id' data-company='$company' data-gst='$gst' data-address='$address'>$company</option>";
+    echo "<option value='{$row['id']}' data-company='{$row['company_name']}' data-gst='{$row['gst_number']}' data-address='{$row['address']}'>{$row['company_name']}</option>";
 }
 ?>
 </select>
 </div>
 
-<!-- BILL TO Section -->
-<div id="bill-to-box">
+<div id="bill-to-box" class="mb-3" style="background:#f9f9f9;padding:12px;border-radius:8px;">
 <strong>BILL TO:</strong>
 <p id="bill-company">--</p>
 <p><strong>GST:</strong> <span id="bill-gst">--</span></p>
 <p id="bill-address">--</p>
 </div>
 
-<div class="form-group">
-<label>Project Amount</label>
-<input type="number" step="0.01" name="recurring_amount" class="form-control" oninput="calculateTotal()" required>
+<!-- Dynamic Items -->
+<div id="items-container">
+<div class="item-row">
+<textarea name="item_desc[]" class="form-control" placeholder="Description"></textarea>
+<input type="number" name="item_amount[]" class="form-control" placeholder="Amount" oninput="calculateTotal()">
+<button type="button" onclick="removeRow(this)">×</button>
 </div>
-<div class="form-group">
+</div>
+
+<button type="button" class="add-btn" onclick="addItem()">➕ Add New Item</button>
+
+<div class="form-group mt-3">
 <label>Bill Date</label>
 <input type="date" name="bill_date" class="form-control">
 </div>
+
 <div class="form-group">
 <label><input type="checkbox" name="gst" onchange="calculateTotal()"> Apply GST (18%)</label>
 </div>
+
 <div class="form-group">
 <label>Payment Mode</label>
 <select name="payment_mode" class="form-control">
 <option>Cash</option><option>UPI</option><option>Cheque</option><option>Bank Transfer</option>
 </select>
 </div>
-<div class="form-group">
-<label>Description</label>
-<textarea name="recurring_description" class="form-control"></textarea>
-</div>
+
 <div class="form-group">
 <label>Next Payment Date</label>
 <input type="date" name="next_payment" class="form-control">
 </div>
 
-<!-- Dynamic Total Display -->
-<div class="form-group">
-<label>Total (with GST if applied)</label>
-<input type="text" id="total_amount" class="form-control" readonly>
+<!-- Totals -->
+<div class="total-box">
+<p><strong>Subtotal:</strong> ₹ <span id="subtotal">0.00</span></p>
+<p><strong>GST (18%):</strong> ₹ <span id="gst-amount">0.00</span></p>
+<p><strong>Grand Total:</strong> ₹ <span id="grand-total">0.00</span></p>
 </div>
 
-<button type="submit" class="btn btn-primary w-100">🔁 Submit Bill</button>
+<button type="submit" class="save-btn">💾 Save Recurring Bill</button>
 </form>
 </div>
 </div>
@@ -138,23 +156,40 @@ function updateBillTo() {
     let company = select.options[select.selectedIndex].getAttribute('data-company') || '--';
     let gst = select.options[select.selectedIndex].getAttribute('data-gst') || '--';
     let address = select.options[select.selectedIndex].getAttribute('data-address') || '--';
-
     document.getElementById('bill-company').innerText = company;
     document.getElementById('bill-gst').innerText = gst;
     document.getElementById('bill-address').innerText = address;
 }
 
+function addItem() {
+    let container = document.getElementById('items-container');
+    let row = document.createElement('div');
+    row.classList.add('item-row');
+    row.innerHTML = `
+        <textarea name="item_desc[]" class="form-control" placeholder="Description"></textarea>
+        <input type="number" name="item_amount[]" class="form-control" placeholder="Amount" oninput="calculateTotal()">
+        <button type="button" onclick="removeRow(this)">×</button>
+    `;
+    container.appendChild(row);
+}
+
+function removeRow(btn) {
+    btn.parentElement.remove();
+    calculateTotal();
+}
+
 function calculateTotal() {
-    let amount = parseFloat(document.querySelector('input[name="recurring_amount"]').value) || 0;
+    let amounts = document.querySelectorAll('input[name="item_amount[]"]');
+    let subtotal = 0;
+    amounts.forEach(input => {
+        subtotal += parseFloat(input.value) || 0;
+    });
     let gstChecked = document.querySelector('input[name="gst"]').checked;
-    let gstRate = 18;
-    let total = amount;
-
-    if (gstChecked) {
-        total += amount * gstRate / 100;
-    }
-
-    document.getElementById('total_amount').value = '₹ ' + total.toFixed(2);
+    let gstAmount = gstChecked ? (subtotal * 18 / 100) : 0;
+    let grandTotal = subtotal + gstAmount;
+    document.getElementById('subtotal').innerText = subtotal.toFixed(2);
+    document.getElementById('gst-amount').innerText = gstAmount.toFixed(2);
+    document.getElementById('grand-total').innerText = grandTotal.toFixed(2);
 }
 </script>
 </body>

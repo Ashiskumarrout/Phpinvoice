@@ -3,26 +3,46 @@ include 'db.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 if (!isset($_SESSION['user'])) header("Location: index.php");
 
+// Validate Bill ID
 $bill_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+if ($bill_id <= 0) {
+    echo "<script>alert('Invalid Bill ID'); location.href='bill-history.php';</script>";
+    exit;
+}
+
+// Fetch all clients for dropdown
 $clients = $conn->query("SELECT * FROM clients");
 
 // Fetch Bill Details
+$result = $conn->prepare("SELECT * FROM bills WHERE id=?");
+$result->bind_param("i", $bill_id);
+$result->execute();
+$billData = $result->get_result();
+
+if ($billData->num_rows == 0) {
+    echo "<script>alert('Bill not found!'); location.href='bill-history.php';</script>";
+    exit;
+}
+$bill = $billData->fetch_assoc();
+
+// Update Bill
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $client_id = $_POST['client_id'];
+    $client_id = intval($_POST['client_id']);
     $bill_date = $_POST['bill_date'];
     $project_type = $_POST['project_type'];
-    $description = $_POST['description'] ?? '';
+    $description = trim($_POST['description'] ?? '');
     $amount = floatval($_POST['amount'] ?? 0);
     $gst = floatval($_POST['gst'] ?? 0);
     $apply_gst = isset($_POST['apply_gst']) ? 1 : 0;
     $payment_type = $_POST['payment_type'] ?? null;
     $payment_mode = $_POST['payment_mode'] ?? null;
-    $next_payment = $_POST['next_payment'] ?: null;
+    $next_payment = !empty($_POST['next_payment']) ? $_POST['next_payment'] : null;
 
+    // Calculate Total
     $total = $amount + ($apply_gst ? ($amount * $gst / 100) : 0);
 
     $stmt = $conn->prepare("UPDATE bills 
-        SET client_id=?, bill_date=?, amount=?, gst=?, total=?, description=?, project_type=?, apply_gst=?, payment_type=?, payment_mode=?, next_payment_date=? 
+        SET client_id=?, bill_date=?, amount=?, gst=?, total=?, description=?, project_type=?, apply_gst=?, payment_type=?, payment_mode=?, next_payment_date=?, updated_at=NOW()
         WHERE id=?");
     $stmt->bind_param("isdddsssissi", $client_id, $bill_date, $amount, $gst, $total, $description, $project_type, $apply_gst, $payment_type, $payment_mode, $next_payment, $bill_id);
 
@@ -32,17 +52,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         echo "<script>alert('❌ Failed to update bill');</script>";
     }
     exit;
-} else {
-    $result = $conn->query("SELECT * FROM bills WHERE id = $bill_id");
-    if ($result && $result->num_rows > 0) {
-        $bill = $result->fetch_assoc();
-    } else {
-        echo "<script>alert('Bill not found!'); location.href='bill-history.php';</script>";
-        exit;
-    }
 }
 ?>
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -77,7 +88,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <a href="dashboard.php">🏠 Dashboard</a>
     <a href="add-client.php">➕ Add Client</a>
     <a href="client-list.php">📄 Client List</a>
-    <a href="add-bill.php">🧾 Add New Bill</a>
+    <a href="add-one-time-bill.php">🧾 Add One-Time Bill</a>
+    <a href="add-recurring-bill.php">🔁 Add Recurring Bill</a>
     <a href="bill-history.php">📊 Bill History</a>
     <a href="logout.php">🚪 Logout</a>
 </div>
@@ -85,7 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <div class="main-content">
     <div class="form-container">
         <h2 class="mb-4 text-center">✏️ Edit Bill</h2>
-        <form method="post" id="editBillForm">
+        <form method="post">
             
             <label>Client:</label>
             <select name="client_id" class="form-control mb-3" required>
@@ -97,7 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
             <label>Project Type:</label>
             <select name="project_type" id="projectType" class="form-control mb-3" required>
-                <option value="one_time" <?= $bill['project_type'] == 'one_time' ? 'selected' : '' ?>>One Time</option>
+                <option value="onetime" <?= $bill['project_type'] == 'onetime' ? 'selected' : '' ?>>One Time</option>
                 <option value="recurring" <?= $bill['project_type'] == 'recurring' ? 'selected' : '' ?>>Recurring</option>
             </select>
 
@@ -151,11 +163,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     const paymentTypeGroup = document.getElementById('paymentTypeGroup');
 
     function togglePaymentType() {
-        if (projectType.value === 'recurring') {
-            paymentTypeGroup.style.display = 'none';
-        } else {
-            paymentTypeGroup.style.display = 'block';
-        }
+        paymentTypeGroup.style.display = projectType.value === 'recurring' ? 'none' : 'block';
     }
     projectType.addEventListener('change', togglePaymentType);
     togglePaymentType();

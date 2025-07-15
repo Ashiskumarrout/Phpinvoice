@@ -27,13 +27,21 @@ $invoiceDate = date('d/m/Y', strtotime($row['bill_date']));
 $clientName = htmlspecialchars($row['company_name']);
 $clientGST = htmlspecialchars($row['gst_number'] ?? '');
 $clientAddress = nl2br(htmlspecialchars($row['address']));
-$description = nl2br(htmlspecialchars($row['description']));
-$amount = number_format($row['amount'], 2);
+
+$totalAmount = floatval($row['amount']); // Total without GST
 $gstPercent = $row['apply_gst'] ? $row['gst'] : 0;
 $gstAmount = $row['apply_gst'] ? number_format(($row['amount'] * $gstPercent / 100), 2) : "0.00";
-$total = number_format($row['total'], 2);
+$grandTotal = number_format($row['total'], 2);
 $currency = htmlspecialchars($row['currency'] ?? 'INR');
 $nextPayment = $row['next_payment_date'] ? date('d/m/Y', strtotime($row['next_payment_date'])) : 'N/A';
+
+// Split descriptions into items
+$items = explode(',', $row['description']); // e.g., "SEO, SMO"
+$amounts = [];
+$splitAmount = count($items) > 0 ? $totalAmount / count($items) : $totalAmount;
+foreach ($items as $item) {
+    $amounts[] = number_format($splitAmount, 2);
+}
 
 // Background image
 $bgPath = 'companylogo.jpg';
@@ -58,13 +66,13 @@ $html = "
   table.summary td { padding: 6px 10px; }
   .total-row { font-weight: bold; font-size: 16px; color: #000; }
   .footer-wrapper { margin-top: 350px; }
-  .thank {  font-size: 38px; font-weight: bold; color: #0b0b6f; margin-bottom: 10px;  margin-top: 200px; }
+  .thank {  font-size: 38px; font-weight: bold; color: #0b0b6f; margin-bottom: 10px; margin-top: 150px; }
   .footer-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; font-size: 14px; }
   .footer-header span { font-size: 14px; }
-   .footer-header span:first-child { margin-right: 410px; } /* Add space between TERMS and ACCOUNT DETAILS */
+   .footer-header span:first-child { margin-right: 410px; } /* space between TERMS and ACCOUNT DETAILS */
   .footer-left { float: left; width: 50%; margin-top: 5px; font-size: 12px; }
   .footer-right { float: right; width: 45%; text-align: right; margin-top: 5px; font-size: 12px; }
-  .footer-bottom { clear: both; text-align: center; font-size: 12px; margin-top: 60px; border-top: 2px solid red; padding-top: 8px; font-weight: bold; }
+  .footer-bottom { clear: both; text-align: center; font-size: 12px; margin-top: 20px; border-top: 2px solid red; padding-top: 8px; font-weight: bold; }
 </style>
 
 <div class='header'>
@@ -96,25 +104,30 @@ $html = "
       <th style='width:30%; text-align:right;'>AMOUNT</th>
     </tr>
   </thead>
-  <tbody>
-    <tr>
-      <td>{$description}</td>
-      <td style='text-align:right;'>{$amount}</td>
-    </tr>
+  <tbody>";
+foreach ($items as $index => $item) {
+    $item = htmlspecialchars(trim($item));
+    $itemAmount = $amounts[$index];
+    $html .= "<tr>
+                <td>{$item}</td>
+                <td style='text-align:right;'>{$itemAmount}</td>
+              </tr>";
+}
+$html .= "
   </tbody>
 </table>
 
 <table class='summary'>
-  <tr><td>Subtotal:</td><td style='text-align:right;'>{$amount}</td></tr>
+  <tr><td>Subtotal:</td><td style='text-align:right;'>".number_format($totalAmount, 2)."</td></tr>
   <tr><td>GST {$gstPercent}%:</td><td style='text-align:right;'>{$gstAmount}</td></tr>
-  <tr class='total-row'><td>TOTAL:</td><td style='text-align:right;'>{$total} {$currency}</td></tr>
+  <tr class='total-row'><td>TOTAL:</td><td style='text-align:right;'>{$grandTotal} {$currency}</td></tr>
 </table>
 
 <div class='footer-wrapper'>
   <div class='thank'>Thank You</div>
   <div class='footer-header'>
     <span>TERMS & CONDITIONS</span>
-    <span>ACCOUNT DETAILS </span>
+    <span>ACCOUNT DETAILS</span>
   </div>
   <div class='footer-left'>
     Payment is due within 2 days<br>
