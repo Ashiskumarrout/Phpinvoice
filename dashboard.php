@@ -43,9 +43,25 @@ $notif_count = count($notifications);
 <!-- Sidebar -->
 <div class="border-end bg-white" id="sidebar-wrapper">
   <div class="sidebar-heading border-bottom bg-light text-center py-4">
-    <img src="images/Untitled (1200 x 900 px).png" alt="Admin Photo" class="admin-photo" onerror="this.onerror=null;this.src='images/IMG_5672.JPG';">
+    <img src="companylog1.png" alt="Admin Photo" class="admin-photo" onerror="this.onerror=null;this.src='images/IMG_5672.JPG';">
     <div class="mt-2 fw-bold"><?php echo htmlspecialchars($_SESSION['user']); ?></div>
   </div>
+  <style>
+    .admin-photo {
+    /* width: 120px;          
+    height: 120px;         */
+    object-fit:contain;     /* Ensures image fills without distortion */
+    border-radius: 50%;    /* Makes image circular */
+    border: 3px solid #ddd;/* Optional border */
+    display: block;        /* Centers image inside parent */
+    margin: 0 auto;        /* Center alignment */
+    background: #fff;      /* White background if image has transparency */
+}
+.sidebar-heading {
+    text-align: center;    /* Centers everything inside heading */
+}
+
+  </style>
   <div class="list-group list-group-flush">
     <a class="list-group-item list-group-item-action list-group-item-light p-3" href="dashboard.php"><i class="fa-solid fa-gauge"></i> Dashboard</a>
     <a class="list-group-item list-group-item-action list-group-item-light p-3" href="add-client.php"><i class="fa-solid fa-user-plus"></i> Add Client</a>

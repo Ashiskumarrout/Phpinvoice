@@ -10,7 +10,6 @@ if (!isset($_SESSION['user'])) exit('Unauthorized access');
 $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 if ($id <= 0) exit("Invalid invoice ID.");
 
-// Fetch data
 $stmt = $conn->prepare("
     SELECT bills.*, clients.company_name, clients.address 
     FROM bills 
@@ -22,117 +21,122 @@ $stmt->execute();
 $result = $stmt->get_result();
 if (!$row = $result->fetch_assoc()) exit("Invoice not found.");
 
-// Prepare fields
 $invoiceNo = htmlspecialchars($row['invoice_no'] ?: 'INV-' . str_pad($row['id'], 5, '0', STR_PAD_LEFT));
+$invoiceDate = date('d/m/Y', strtotime($row['bill_date']));
 $clientName = htmlspecialchars($row['company_name']);
 $clientAddress = nl2br(htmlspecialchars($row['address']));
-$date = htmlspecialchars($row['bill_date']);
-$description = htmlspecialchars($row['description']);
-$remarks = !empty($row['remarks']) ? nl2br(htmlspecialchars($row['remarks'])) : 'None';
-$projectType = htmlspecialchars($row['project_type']);
-$paymentType = htmlspecialchars($row['payment_type'] ?? '');
-$paymentMode = htmlspecialchars($row['payment_mode'] ?? '');
-$nextPayment = $row['next_payment_date'] ? htmlspecialchars($row['next_payment_date']) : 'N/A';
+$nextPayment = $row['next_payment_date'] ? date('d/m/Y', strtotime($row['next_payment_date'])) : 'N/A';
+$paymentMode = htmlspecialchars($row['payment_mode'] ?? 'N/A');
+$paymentType = htmlspecialchars($row['payment_type'] ?? 'N/A');
 
-// Financial details
-$amountPaid = floatval($row['amount']);
 $estimatedValue = isset($row['estimated_value']) ? floatval($row['estimated_value']) : 0;
 $gstRate = $row['apply_gst'] ? floatval($row['gst']) : 0;
-$gstAmount = $gstRate > 0 ? ($estimatedValue * $gstRate / 100) : 0;
-$totalPayable = $estimatedValue + $gstAmount;
-$remaining = max($totalPayable - $amountPaid, 0);
 
-// Format for display
-$amountPaidDisplay = "₹" . number_format($amountPaid, 2);
-$estimatedDisplay = "₹" . number_format($estimatedValue, 2);
-$gstDisplay = $gstRate > 0 ? "₹" . number_format($gstAmount, 2) . " ({$gstRate}%)" : "Not Applied";
-$totalPayableDisplay = "₹" . number_format($totalPayable, 2);
-$remainingDisplay = "₹" . number_format($remaining, 2);
+$items = explode(",", $row['description']);
+$subtotal = 0;
+$itemRows = '';
+foreach ($items as $item) {
+    $item = trim($item);
+    preg_match('/^(.*)\(([\d.]+)\)$/', $item, $matches);
+    $name = htmlspecialchars(trim($matches[1] ?? $item));
+    $price = isset($matches[2]) ? floatval($matches[2]) : 0;
+    $subtotal += $price;
+    $itemRows .= "<tr><td>{$name}</td><td style='text-align:right;'>" . number_format($price, 2) . "</td></tr>";
+}
 
-// Background Logo
+$gstAmount = $gstRate > 0 ? ($subtotal * $gstRate / 100) : 0;
+$grandTotal = $subtotal + $gstAmount;
+$remaining = max($estimatedValue - $grandTotal, 0);
+
+$estimatedDisplay = "" . number_format($estimatedValue, 2);
+$subtotalDisplay = "" . number_format($subtotal, 2);
+$gstDisplay = $gstRate > 0 ? "" . number_format($gstAmount, 2) . " ({$gstRate}%)" : "Not Applied";
+$grandTotalDisplay = "" . number_format($grandTotal, 2);
+$remainingDisplay = "" . number_format($remaining, 2);
+
 $bgPath = 'companylogo.jpg';
 $backgroundImage = file_exists($bgPath) ? base64_encode(file_get_contents($bgPath)) : '';
-$bgStyle = $backgroundImage ? "background: url('data:image/jpeg;base64,{$backgroundImage}') no-repeat center center; background-size: cover; opacity: 0.05;" : '';
 
-// Header Logo
-$logo = '';
-if (!empty($row['logo']) && file_exists($row['logo'])) {
-    $imageData = base64_encode(file_get_contents($row['logo']));
-    $logo = '<img src="data:image/png;base64,' . $imageData . '" style="width:120px; height:auto; border-radius:8px;">';
-}
-
-// Split description into items
-$itemRows = '';
-if (!empty($description)) {
-    $items = explode(",", $description);
-    foreach ($items as $item) {
-        $itemRows .= "<tr><td style='padding:8px;'>" . htmlspecialchars(trim($item)) . "</td></tr>";
-    }
-}
-
-// Build HTML
 $html = "
 <meta charset='UTF-8'>
 <style>
-  @page { margin: 20px; }
-  body { font-family: Arial, sans-serif; color: #333; padding: 20px; font-size: 14px; }
-  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-  .header h2 { text-align: center; color: #4A148C; font-size: 26px; margin: 0; flex: 1; }
-  .client-info { background: #f9f9f9; padding: 10px; border-radius: 8px; margin-top: 10px; }
-  .client-info p { margin: 4px 0; font-size: 14px; }
-  table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
-  th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-  th { background-color: #f0f0f0; }
-  .total-box { margin-top: 15px; text-align: right; font-size: 16px; font-weight: bold; }
-  .remarks { margin-top: 20px; font-size: 14px; }
+  @page { margin: 25px; }
+  body { font-family: Arial, sans-serif; color: #333; padding: 20px; font-size: 14px; background: url('data:image/jpeg;base64,{$backgroundImage}') no-repeat center center; background-size: cover; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; }
+  .invoice-title { font-size: 30px; color: #0b0b6f; font-weight: bold; }
+  table.items { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
+  table.items th, table.items td { border-bottom: 2px solid red; padding: 10px; text-align: left; }
+  table.summary { width: 300px; float: right; margin-top: 20px; font-size: 14px; }
+  .total-row { font-weight: bold; font-size: 16px; color: #000; }
+  .footer-wrapper { clear: both; margin-top: 50px; }
+  .thank {  font-size: 38px; font-weight: bold; color: #0b0b6f; margin-bottom: 10px; margin-top: 150px; }
+  .footer-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; font-size: 14px; }
+  .footer-header span { font-size: 14px; }
+   .footer-header span:first-child { margin-right: 410px; } /* space between TERMS and ACCOUNT DETAILS */
+  .footer-left { float: left; width: 50%; margin-top: 5px; font-size: 12px; }
+  .footer-right { float: right; width: 45%; text-align: right; margin-top: 5px; font-size: 12px; }
+  .footer-bottom { clear: both; text-align: center; font-size: 12px; margin-top: 20px; border-top: 2px solid red; padding-top: 8px; font-weight: bold; }
+  .right-header{ text-align: right; font-size: 14px; }
 </style>
 
 <div class='header'>
-  <div>{$logo}</div>
-  <h2>INVOICE</h2>
-  <div style='width:120px;'></div>
+  <div>
+    <div class='invoice-title'>INVOICE</div>
+    <p><strong>SOFTECH 18</strong><br>GST - 21BVNPR0777G1ZD<br>CDA SECTOR 10<br>CUTTACK, ODISHA<br>753014</p>
+  </div>
+  <div class='right-header'>
+    <p><strong>INVOICE #</strong> {$invoiceNo}<br><strong>DATE:</strong> {$invoiceDate}</p>
+  </div>
 </div>
 
-<div class='client-info'>
-  <p><strong>Invoice No:</strong> {$invoiceNo}</p>
-  <p><strong>Client:</strong> {$clientName}</p>
-  <p><strong>Address:</strong> {$clientAddress}</p>
-  <p><strong>Date:</strong> {$date}</p>
-  <p><strong>Project Type:</strong> {$projectType}</p>
-  <p><strong>Estimated Value:</strong> {$estimatedDisplay}</p>
-  <p><strong>Payment Type:</strong> {$paymentType}</p>
-  <p><strong>Payment Mode:</strong> {$paymentMode}</p>
-  <p><strong>Next Payment:</strong> {$nextPayment}</p>
+<div>
+  <p><strong>BILL TO:</strong><br>{$clientName}<br>{$clientAddress}</p>
 </div>
 
-<h3 style='margin-top:20px;'>Project Details</h3>
-<table>
-  <tr><th>Description</th></tr>
-  {$itemRows}
+<table class='items'>
+  <thead><tr><th>DESCRIPTION</th><th style='text-align:right;'>AMOUNT</th></tr></thead>
+  <tbody>{$itemRows}</tbody>
 </table>
 
-<h3 style='margin-top:20px;'>Billing Summary</h3>
-<table>
-  <tr><th>Estimated Value</th><td>{$estimatedDisplay}</td></tr>
-  <tr><th>GST</th><td>{$gstDisplay}</td></tr>
-  <tr><th>Total Payable</th><td><strong>{$totalPayableDisplay}</strong></td></tr>
-  <tr><th>Amount Paid</th><td>{$amountPaidDisplay}</td></tr>
-  <tr><th>Remaining Amount</th><td><strong>{$remainingDisplay}</strong></td></tr>
+<table class='summary'>
+  <tr><td>Estimated Project Value:</td><td style='text-align:right;'>{$estimatedDisplay}</td></tr>
+  <tr><td>Subtotal:</td><td style='text-align:right;'>{$subtotalDisplay}</td></tr>
+  <tr><td>GST:</td><td style='text-align:right;'>{$gstDisplay}</td></tr>
+  <tr><td>Grand Total:</td><td style='text-align:right;'>{$grandTotalDisplay}</td></tr>
+  <tr class='total-row'><td>Remaining Amount:</td><td style='text-align:right;'>{$remainingDisplay}</td></tr>
 </table>
 
-<div class='total-box'>Grand Total: {$totalPayableDisplay}</div>
+<div style='margin-top:20px; font-size:14px; font-weight:bold;'>Next Renewal Date: {$nextPayment}</div>
+<div style='margin-top:10px; font-size:14px; font-weight:bold;'>Payment Mode: {$paymentMode} | Payment Type: {$paymentType}</div>
 
-<div class='remarks'>
-  <strong>Remarks:</strong><br>{$remarks}
+<div class='footer-wrapper'>
+  <div class='thank'>Thank You</div>
+  <div class='footer-header'>
+    <span>TERMS & CONDITIONS</span>
+    <span>ACCOUNT DETAILS</span>
+  </div>
+  <div class='footer-left'>
+    Payment is due within 2 days
+  </div>
+  <div class='footer-right'>
+    Softech18<br>
+    Ac- 243305002040<br>
+    IFSC-ICIC0002433<br>
+    ICICI Bank<br>
+    College square branch<br>
+    Cuttack
+  </div>
+  <div class='footer-bottom'>
+    Contact us: +91 9937857561 | visit us: www.softech18.com
+  </div>
 </div>
 ";
 
-// Generate PDF
 $options = new Options();
 $options->set('defaultFont', 'Arial');
 $options->set('isRemoteEnabled', true);
 $dompdf = new Dompdf($options);
-$dompdf->loadHtml($html);
+$dompdf->loadHtml($html, 'UTF-8');
 $dompdf->setPaper('A4', 'portrait');
 $dompdf->render();
 $dompdf->stream("invoice_{$id}.pdf", ["Attachment" => false]);

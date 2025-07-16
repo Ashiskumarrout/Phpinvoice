@@ -60,31 +60,103 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <title>Edit Bill</title>
     <link rel="stylesheet" href="bootstrap.min.css">
     <style>
-        body { font-family: Arial; background: #f4f4f4; margin: 0; }
-        .sidebar {
-            width: 250px; background: linear-gradient(135deg, #7F00FF, #E100FF);
-            position: fixed; top: 0; left: 0; min-height: 100vh; color: white; padding: 20px;
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f4f4f4;
+            margin: 0;
+            display: flex;
         }
-        .sidebar a { color: #fff; display: block; padding: 12px 10px; text-decoration: none; font-weight: bold; }
-        .sidebar a:hover { background: rgba(255,255,255,0.2); border-radius: 8px; }
-        .main-content { margin-left: 260px; padding: 30px; }
+        .sidebar {
+            width: 250px;
+            background: linear-gradient(135deg, #7F00FF, #E100FF);
+            position: fixed;
+            top: 0; left: 0;
+            min-height: 100vh;
+            color: white;
+            padding: 20px;
+        }
+        .sidebar h3 {
+            margin-bottom: 20px;
+            font-size: 22px;
+            font-weight: bold;
+        }
+        .sidebar a {
+            color: #fff;
+            display: block;
+            padding: 12px 10px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: 0.3s;
+            border-radius: 6px;
+        }
+        .sidebar a:hover {
+            background: rgba(255,255,255,0.2);
+            padding-left: 15px;
+        }
+        .main-content {
+            margin-left: 260px;
+            padding: 40px;
+            width: 100%;
+        }
         .form-container {
-            background: #fff; padding: 30px; border-radius: 12px;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-            max-width: 700px; margin: auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+            max-width: 750px;
+            margin: auto;
+        }
+        .form-container h2 {
+            margin-bottom: 25px;
+            text-align: center;
+            font-weight: bold;
+            color: #333;
+        }
+        label {
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        input[type="text"], input[type="number"], input[type="date"], select, textarea {
+            width: 100%;
+            padding: 12px;
+            margin-top: 8px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            font-size: 15px;
+            transition: 0.3s;
+        }
+        input:focus, select:focus, textarea:focus {
+            border-color: #7F00FF;
+            box-shadow: 0 0 8px rgba(127, 0, 255, 0.2);
+            outline: none;
+        }
+        textarea {
+            resize: none;
+        }
+        .form-check-label {
+            font-weight: 500;
         }
         .btn-primary {
             background: linear-gradient(135deg, #7F00FF, #E100FF);
-            border: none; padding: 12px; font-size: 16px; font-weight: bold; border-radius: 25px;
+            border: none;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 8px;
+            width: 100%;
+            color: white;
+            transition: 0.3s;
         }
-        .btn-primary:hover { opacity: 0.9; }
-        label { font-weight: bold; }
+        .btn-primary:hover {
+            transform: scale(1.02);
+            opacity: 0.9;
+        }
     </style>
 </head>
 <body>
 
 <div class="sidebar">
-    <h3>Admin Panel</h3>
+    <h3>🧾 Admin Panel</h3>
     <a href="dashboard.php">🏠 Dashboard</a>
     <a href="add-client.php">➕ Add Client</a>
     <a href="client-list.php">📄 Client List</a>
@@ -96,9 +168,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
 <div class="main-content">
     <div class="form-container">
-        <h2 class="mb-4 text-center">✏️ Edit Bill</h2>
+        <h2>✏️ Edit Bill</h2>
         <form method="post">
-            
+
             <label>Client:</label>
             <select name="client_id" class="form-control mb-3" required>
                 <?php while ($client = $clients->fetch_assoc()) {
@@ -152,7 +224,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <label>Next Payment Date:</label>
             <input type="date" name="next_payment" class="form-control mb-4" value="<?= htmlspecialchars($bill['next_payment_date']) ?>">
 
-            <button class="btn btn-primary w-100">Update Bill</button>
+            <button class="btn btn-primary">💾 Update Bill</button>
         </form>
     </div>
 </div>
