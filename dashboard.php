@@ -248,6 +248,7 @@ document.addEventListener("click", function(e) {
         alert(data);
         document.getElementById("notif-" + billId)?.remove();
         document.getElementById("row-" + billId)?.remove();
+        
       });
     }
   }

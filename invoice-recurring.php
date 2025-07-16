@@ -35,13 +35,8 @@ $grandTotal = number_format($row['total'], 2);
 $currency = htmlspecialchars($row['currency'] ?? 'INR');
 $nextPayment = $row['next_payment_date'] ? date('d/m/Y', strtotime($row['next_payment_date'])) : 'N/A';
 
-// Split descriptions into items
-$items = explode(',', $row['description']); // e.g., "SEO, SMO"
-$amounts = [];
-$splitAmount = count($items) > 0 ? $totalAmount / count($items) : $totalAmount;
-foreach ($items as $item) {
-    $amounts[] = number_format($splitAmount, 2);
-}
+// Clean description: remove (....) and trim spaces
+$description = htmlspecialchars(trim(preg_replace('/\([^)]*\)/', '', $row['description'])));
 
 // Background image
 $bgPath = 'companylogo.jpg';
@@ -66,10 +61,10 @@ $html = "
   table.summary td { padding: 6px 10px; }
   .total-row { font-weight: bold; font-size: 16px; color: #000; }
   .footer-wrapper { margin-top: 350px; }
-  .thank {  font-size: 38px; font-weight: bold; color: #0b0b6f; margin-bottom: 10px; margin-top: 150px; }
+  .thank { font-size: 38px; font-weight: bold; color: #0b0b6f; margin-bottom: 10px; margin-top: 150px; }
   .footer-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; font-size: 14px; }
   .footer-header span { font-size: 14px; }
-   .footer-header span:first-child { margin-right: 410px; } /* space between TERMS and ACCOUNT DETAILS */
+  .footer-header span:first-child { margin-right: 410px; }
   .footer-left { float: left; width: 50%; margin-top: 5px; font-size: 12px; }
   .footer-right { float: right; width: 45%; text-align: right; margin-top: 5px; font-size: 12px; }
   .footer-bottom { clear: both; text-align: center; font-size: 12px; margin-top: 20px; border-top: 2px solid red; padding-top: 8px; font-weight: bold; }
@@ -104,16 +99,11 @@ $html = "
       <th style='width:30%; text-align:right;'>AMOUNT</th>
     </tr>
   </thead>
-  <tbody>";
-foreach ($items as $index => $item) {
-    $item = htmlspecialchars(trim($item));
-    $itemAmount = $amounts[$index];
-    $html .= "<tr>
-                <td>{$item}</td>
-                <td style='text-align:right;'>{$itemAmount}</td>
-              </tr>";
-}
-$html .= "
+  <tbody>
+    <tr>
+      <td>{$description}</td>
+      <td style='text-align:right;'>".number_format($totalAmount, 2)."</td>
+    </tr>
   </tbody>
 </table>
 
