@@ -85,6 +85,14 @@ $res = $conn->query($query);
       color: #333;
     }
 
+    .alert {
+      max-width: 700px;
+      margin: 10px auto;
+      border-radius: 8px;
+      text-align: center;
+      font-weight: 600;
+    }
+
     .search-box {
       display: flex;
       gap: 10px;
@@ -117,29 +125,33 @@ $res = $conn->query($query);
       padding: 20px;
       border-radius: 12px;
       box-shadow: 0 6px 15px rgba(0,0,0,0.08);
+      overflow-x: auto;
     }
     .table {
       margin: 0;
       border-radius: 8px;
-      overflow: hidden;
+      min-width: 900px;
     }
     .table thead {
       background: #7F00FF;
       color: white;
     }
-    .table th {
-      padding: 14px;
-      font-weight: 600;
-    }
-    .table td {
+    .table th, .table td {
       padding: 14px;
       font-size: 14px;
-      color: #333;
       vertical-align: middle;
+      text-align: left;
     }
     .table tbody tr:hover {
       background: #f8f9fa;
     }
+    /* Column widths */
+    .table th:nth-child(1), .table td:nth-child(1) { width: 8%; }
+    .table th:nth-child(2), .table td:nth-child(2) { width: 22%; }
+    .table th:nth-child(3), .table td:nth-child(3) { width: 15%; }
+    .table th:nth-child(4), .table td:nth-child(4) { width: 35%; white-space: pre-line; }
+    .table th:nth-child(5), .table td:nth-child(5) { width: 20%; text-align: center; }
+
     .btn-warning {
       background-color: #ffc107;
       border: none;
@@ -172,6 +184,8 @@ $res = $conn->query($query);
   <a href="client-list.php">📄 Client List</a>
   <a href="add-one-time-bill.php">🧾 Add One-Time Bill</a>
   <a href="add-recurring-bill.php">🔁 Add Recurring Bill</a>
+  <a href="re-nogst.php">🔁 Add Recurring No GST</a>
+  <a href="one-nogst.php">🧾 One-Time No GST</a>
   <a href="bill-history.php">📊 Bill History</a>
   <a href="logout.php">🚪 Logout</a>
 </div>
@@ -180,6 +194,13 @@ $res = $conn->query($query);
   <div class="header">
     <h4>Welcome, <?php echo htmlspecialchars($_SESSION['user']); ?> 👋</h4>
   </div>
+
+  <!-- Success Message -->
+  <?php if (isset($_GET['msg']) && $_GET['msg'] === 'deleted'): ?>
+      <div class="alert alert-success">✅ Client deleted successfully!</div>
+  <?php elseif (isset($_GET['msg']) && $_GET['msg'] === 'updated'): ?>
+      <div class="alert alert-info">✅ Client updated successfully!</div>
+  <?php endif; ?>
 
   <h2>📋 Client List</h2>
 
@@ -211,10 +232,10 @@ $res = $conn->query($query);
                     <td>{$row['id']}</td>
                     <td>".htmlspecialchars($row['company_name'])."</td>
                     <td>".htmlspecialchars($row['gst_number'])."</td>
-                    <td style='white-space: pre-line;'>".htmlspecialchars($row['address'])."</td>
+                    <td>".htmlspecialchars($row['address'])."</td>
                     <td>
                       <a href='edit-client.php?id={$row['id']}' class='btn btn-sm btn-warning'>Edit</a>
-                      <a href='delete-client.php?id={$row['id']}' class='btn btn-sm btn-danger' onclick='return confirm(\"Are you sure you want to delete this client?\");'>Delete</a>
+                      <a href='delated-client.php?id={$row['id']}' class='btn btn-sm btn-danger' onclick='return confirm(\"Are you sure you want to delete this client?\");'>Delete</a>
                     </td>
                   </tr>";
           }

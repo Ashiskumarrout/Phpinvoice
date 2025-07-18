@@ -56,6 +56,7 @@ $stats = [
 <link rel="stylesheet" href="bootstrap.min.css">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
+
 body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #f4f6f9; color: #333; }
 .dark-mode { background: #121212; color: #e0e0e0; }
 .sidebar { width: 230px; background: linear-gradient(135deg,#7F00FF,#E100FF); min-height: 100vh; color: white; padding: 20px; position: fixed; }
@@ -83,6 +84,8 @@ thead th { position:sticky; top:0; background:#7F00FF; color:white; z-index:2; }
 .export-btns { margin-left:auto; display:flex; gap:10px; }
 @media(max-width:768px){ .sidebar{display:none;} .main-content{margin-left:0;} }
 .dark-toggle { background:#7F00FF; color:white; padding:8px 12px; border:none; border-radius:8px; cursor:pointer; margin-left:10px; }
+
+
 </style>
 </head>
 <body>
@@ -93,6 +96,8 @@ thead th { position:sticky; top:0; background:#7F00FF; color:white; z-index:2; }
   <a href="client-list.php">📄 Client List</a>
   <a href="add-one-time-bill.php">🧾 Add One-Time Bill</a>
   <a href="add-recurring-bill.php">🔁 Add Recurring Bill</a>
+    <a href="re-nogst.php">🔁 Add Recurring No GST</a>
+  <a href="one-nogst.php">🧾 One-Time No GST</a>
   <a href="bill-history.php">📊 Bill History</a>
   <a href="logout.php">🚪 Logout</a>
 </div>
@@ -154,8 +159,14 @@ thead th { position:sticky; top:0; background:#7F00FF; color:white; z-index:2; }
 <?php if ($res->num_rows > 0): while($row = $res->fetch_assoc()):
 $tagClass = strtolower(str_replace(' ','',$row['project_type']))==='recurring'?'recurring':'onetime';
 $status = ucfirst($row['status'] ?? 'Pending');
-$pdfLink = $tagClass==='onetime'?"invoice-onetime.php?id={$row['id']}":"invoice-recurring.php?id={$row['id']}";
 $gstDisplay = $row['apply_gst'] ? "{$row['gst']}%" : "N/A";
+
+// ✅ Correct PDF Link Selection
+if ($tagClass === 'onetime') {
+    $pdfLink = ($row['apply_gst'] == 1) ? "invoice-onetime.php?id={$row['id']}" : "onenogst.php?id={$row['id']}";
+} else {
+    $pdfLink = ($row['apply_gst'] == 1) ? "invoice-recurring.php?id={$row['id']}" : "renogst.php?id={$row['id']}";
+}
 
 if ($tagClass==='recurring') {
     $estimated='N/A'; $remaining='N/A'; $paymentType='N/A';
@@ -185,7 +196,11 @@ $nextPayment = $row['next_payment_date'] ?: 'N/A';
 <td><?= $row['bill_date'] ?></td>
 <td><?= $row['updated_at'] ?></td>
 <td><a href="delete-bill.php?id=<?= $row['id'] ?>" class="btn btn-danger btn-sm" onclick="return confirm('Delete this bill?')">Delete</a></td>
-<td><a href="<?= $pdfLink ?>" class="btn btn-success btn-sm" target="_blank">PDF</a></td>
+<td>
+  <a href="<?= $pdfLink ?>" class="btn btn-success btn-sm" target="_blank">View PDF</a>
+  <a href="<?= $pdfLink ?>" download="invoice-<?= $row['invoice_no'] ?: $row['id'] ?>.pdf" class="btn btn-primary btn-sm">Download</a>
+</td>
+
 <td><a href="edit-bill.php?id=<?= $row['id'] ?>" class="btn btn-warning btn-sm">Edit</a></td>
 </tr>
 <?php endwhile; else: ?>

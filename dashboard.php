@@ -30,12 +30,74 @@ $notif_count = count($notifications);
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
-.admin-photo { width: 90px; height: 90px; object-fit: cover; border-radius: 50%; border: 3px solid #0d6efd; margin-bottom: 10px; background: #fff; }
+body {
+    transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* Admin Photo */
+.admin-photo { 
+    width: 90px; height: 90px; object-fit: cover; 
+    border-radius: 50%; border: 3px solid #0d6efd; 
+    margin-bottom: 10px; background: #fff; 
+}
+
+/* Notification Styles */
 .notification-bell { position: relative; cursor: pointer; }
 .notif-count { position: absolute; top: -5px; right: -8px; background: red; color: white; font-size: 12px; font-weight: bold; padding: 2px 6px; border-radius: 50%; }
 .dropdown-menu { max-height: 350px; overflow-y: auto; width: 320px; }
 .notif-item { font-size: 14px; padding: 8px; border-bottom: 1px solid #eee; }
 .notif-item:last-child { border-bottom: none; }
+
+/* 🌙 Dark Mode Styling */
+body.dark-mode {
+    background-color: #121212;
+    color: #f1f1f1;
+}
+body.dark-mode .navbar, 
+body.dark-mode .modal-content, 
+body.dark-mode .card {
+    background-color: #1e1e1e;
+    color: #f1f1f1;
+}
+body.dark-mode .list-group-item {
+    background-color: #1e1e1e;
+    color: #f1f1f1;
+}
+body.dark-mode .dropdown-menu {
+    background-color: #1e1e1e;
+    color: #f1f1f1;
+}
+body.dark-mode table {
+    background-color: #1e1e1e;
+    color: #f1f1f1;
+}
+body.dark-mode th, 
+body.dark-mode td {
+    border-color: #333;
+}
+body.dark-mode .btn-close {
+    filter: invert(1);
+}
+
+/* Smooth transition for all elements */
+.navbar, .modal-content, .card, .list-group-item, .dropdown-menu, table, th, td {
+    transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* Dark Mode Toggle Button */
+.dark-toggle {
+    background: #0d6efd;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    margin-left: 15px;
+    font-size: 14px;
+    transition: background 0.3s;
+}
+.dark-toggle:hover {
+    background: #0a58ca;
+}
 </style>
 </head>
 <body>
@@ -46,22 +108,6 @@ $notif_count = count($notifications);
     <img src="companylog1.png" alt="Admin Photo" class="admin-photo" onerror="this.onerror=null;this.src='images/IMG_5672.JPG';">
     <div class="mt-2 fw-bold"><?php echo htmlspecialchars($_SESSION['user']); ?></div>
   </div>
-  <style>
-    .admin-photo {
-    /* width: 120px;          
-    height: 120px;         */
-    object-fit:contain;     /* Ensures image fills without distortion */
-    border-radius: 50%;    /* Makes image circular */
-    border: 3px solid #ddd;/* Optional border */
-    display: block;        /* Centers image inside parent */
-    margin: 0 auto;        /* Center alignment */
-    background: #fff;      /* White background if image has transparency */
-}
-.sidebar-heading {
-    text-align: center;    /* Centers everything inside heading */
-}
-
-  </style>
   <div class="list-group list-group-flush">
     <a class="list-group-item list-group-item-action list-group-item-light p-3" href="dashboard.php"><i class="fa-solid fa-gauge"></i> Dashboard</a>
     <a class="list-group-item list-group-item-action list-group-item-light p-3" href="add-client.php"><i class="fa-solid fa-user-plus"></i> Add Client</a>
@@ -70,6 +116,8 @@ $notif_count = count($notifications);
     <a class="list-group-item list-group-item-action list-group-item-light p-3" href="bill-history.php"><i class="fa-solid fa-clock-rotate-left"></i> Bill History</a>
     <a class="list-group-item list-group-item-action list-group-item-light p-3" href="add-recurring-bill.php"><i class="fa-solid fa-repeat"></i> Add Recurring Bill</a>
     <a class="list-group-item list-group-item-action list-group-item-light p-3" href="add-one-time-bill.php"><i class="fa-solid fa-file-invoice"></i> One-Time Invoices</a>
+    <a class="list-group-item list-group-item-action list-group-item-light p-3" href="re-nogst.php"><i class="fa-solid fa-repeat"></i> Add Recurring No GST</a>
+    <a class="list-group-item list-group-item-action list-group-item-light p-3" href="one-nogst.php"><i class="fa-solid fa-file-invoice"></i> One-Time No GST</a>
     <a class="list-group-item list-group-item-action list-group-item-light p-3" href="logout.php"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
   </div>
 </div>
@@ -81,6 +129,11 @@ $notif_count = count($notifications);
     <div class="container-fluid">
       <button class="btn btn-primary" id="sidebarToggle"><i class="fa-solid fa-bars"></i></button>
       
+      <!-- 🌙 Dark Mode Button -->
+      <button class="dark-toggle" id="darkModeBtn" onclick="toggleDarkMode()">
+        🌙 Dark Mode
+      </button>
+
       <!-- Notification Bell -->
       <div class="ms-auto me-4 notification-bell dropdown">
         <i class="fa-solid fa-bell fa-2x" data-bs-toggle="dropdown" aria-expanded="false"></i>
@@ -115,7 +168,7 @@ $notif_count = count($notifications);
     <h1 class="mt-2">Dashboard</h1>
     <div class="row mt-4">
       <!-- Total Clients -->
-      <div class="col-xl-3 col-md-6 mb-4">
+      <div class="col-xl-4 col-md-6 mb-4">
         <div class="card border-left-primary shadow h-100 py-2">
           <div class="card-body">
             <div class="d-flex justify-content-between">
@@ -132,7 +185,7 @@ $notif_count = count($notifications);
       </div>
 
       <!-- Total Bills -->
-      <div class="col-xl-3 col-md-6 mb-4">
+      <div class="col-xl-4 col-md-6 mb-4">
         <div class="card border-left-success shadow h-100 py-2">
           <div class="card-body">
             <div class="d-flex justify-content-between">
@@ -148,25 +201,8 @@ $notif_count = count($notifications);
         </div>
       </div>
 
-      <!-- Total Amount -->
-      <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-warning shadow h-100 py-2">
-          <div class="card-body">
-            <div class="d-flex justify-content-between">
-              <div>
-                <div class="text-xs fw-bold text-warning text-uppercase mb-1"><i class="fa-solid fa-sack-dollar"></i> Total Amount</div>
-                <div class="h5 mb-0 fw-bold text-dark">
-                  ₹<?php $sum_q = $conn->query("SELECT IFNULL(SUM(amount),0) AS total FROM bills"); echo number_format($sum_q->fetch_assoc()['total'], 2); ?>
-                </div>
-              </div>
-              <i class="fa-solid fa-sack-dollar fa-2x text-gray-300"></i>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Pending Bills with View & Clear Button -->
-      <div class="col-xl-3 col-md-6 mb-4">
+      <!-- Pending Bills -->
+      <div class="col-xl-4 col-md-6 mb-4">
         <div class="card border-left-danger shadow h-100 py-2">
           <div class="card-body">
             <div class="d-flex justify-content-between">
@@ -230,12 +266,13 @@ $notif_count = count($notifications);
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+// Sidebar toggle
 document.querySelector("#sidebarToggle").addEventListener("click", function (e) {
   e.preventDefault();
   document.querySelector("#wrapper").classList.toggle("toggled");
 });
 
-// Handle Mark as Paid from both dropdown and modal
+// Mark as Paid
 document.addEventListener("click", function(e) {
   if (e.target.classList.contains("markPaid")) {
     let billId = e.target.getAttribute("data-id");
@@ -248,11 +285,38 @@ document.addEventListener("click", function(e) {
         alert(data);
         document.getElementById("notif-" + billId)?.remove();
         document.getElementById("row-" + billId)?.remove();
-        
       });
     }
   }
 });
+
+// 🌙 Dark Mode Toggle with Icon Change
+function toggleDarkMode() {
+  document.body.classList.toggle('dark-mode');
+  const btn = document.getElementById('darkModeBtn');
+  if (document.body.classList.contains('dark-mode')) {
+    btn.innerHTML = "☀️ Light Mode";
+    localStorage.setItem('darkMode', 'enabled');
+  } else {
+    btn.innerHTML = "🌙 Dark Mode";
+    localStorage.setItem('darkMode', 'disabled');
+  }
+}
+// Apply saved mode on load
+if (localStorage.getItem('darkMode') === 'enabled') {
+  document.body.classList.add('dark-mode');
+  document.getElementById('darkModeBtn').innerHTML = "☀️ Light Mode";
+}
 </script>
+<style>
+  /* Override Bootstrap bg-light in Dark Mode */
+body.dark-mode .bg-light {
+    background-color: #121212 !important;
+}
+body.dark-mode .border-bottom {
+    border-color: #333 !important;
+}
+
+</style>
 </body>
 </html>

@@ -25,7 +25,7 @@ if (!$row = $result->fetch_assoc()) exit("Invoice not found.");
 // Invoice info
 $invoiceNo = htmlspecialchars($row['invoice_no'] ?: 'INV-' . str_pad($row['id'], 5, '0', STR_PAD_LEFT));
 $invoiceDate = date('d/m/Y', strtotime($row['bill_date']));
-$clientName = htmlspecialchars($row['company_name']);
+$clientName = "<strong>" . htmlspecialchars($row['company_name']) . "</strong>"; // ✅ Bold Client Name
 $clientAddress = nl2br(htmlspecialchars($row['address']));
 $nextPayment = $row['next_payment_date'] ? date('d/m/Y', strtotime($row['next_payment_date'])) : 'N/A';
 $paymentMode = htmlspecialchars($row['payment_mode'] ?? 'N/A');
@@ -76,20 +76,12 @@ $html = "
          background: url('data:image/jpeg;base64,{$backgroundImage}') no-repeat center center; background-size: cover; }
   .header { display: flex; justify-content: space-between; align-items: flex-start; }
   .invoice-title { font-size: 30px; color: #0b0b6f; font-weight: bold; }
+  .right-header { text-align: right; font-size: 14px; }
   table.items { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
   table.items th, table.items td { border-bottom: 2px solid red; padding: 10px; text-align: left; }
   table.items td:last-child, table.items th:last-child { text-align: right; }
   table.summary { width: 300px; float: right; margin-top: 20px; font-size: 14px; }
   .total-row { font-weight: bold; font-size: 16px; color: #000; }
-  .footer-wrapper { clear: both; margin-top: 50px; }
-  .thank { font-size: 38px; font-weight: bold; color: #0b0b6f; margin-bottom: 10px; margin-top: 150px; }
-  .footer-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; font-size: 14px; }
-  .footer-header span { font-size: 14px; }
-  .footer-header span:first-child { margin-right: 410px; }
-  .footer-left { float: left; width: 50%; margin-top: 5px; font-size: 12px; }
-  .footer-right { float: right; width: 45%; text-align: right; margin-top: 5px; font-size: 12px; }
-  .footer-bottom { clear: both; text-align: center; font-size: 12px; margin-top: 20px; border-top: 2px solid red; padding-top: 8px; font-weight: bold; }
-  .right-header { text-align: right; font-size: 14px; }
 </style>
 
 <div class='header'>
@@ -106,6 +98,11 @@ $html = "
   <p><strong>BILL TO:</strong><br>{$clientName}<br>{$clientAddress}</p>
 </div>
 
+<div style='margin-top:15px; font-size:14px; font-weight:bold;'>
+  Next Renewal Date: {$nextPayment}<br>
+  Payment Mode: {$paymentMode} | Payment Type: {$paymentType}
+</div>
+
 <table class='items'>
   <thead>
     <tr><th>DESCRIPTION</th><th>AMOUNT</th></tr>
@@ -120,31 +117,6 @@ $html = "
   <tr><td>Grand Total:</td><td style='text-align:right;'>{$grandTotalDisplay}</td></tr>
   <tr class='total-row'><td>Remaining Amount:</td><td style='text-align:right;'>{$remainingDisplay}</td></tr>
 </table>
-
-<div style='margin-top:20px; font-size:14px; font-weight:bold;'>Next Renewal Date: {$nextPayment}</div>
-<div style='margin-top:10px; font-size:14px; font-weight:bold;'>Payment Mode: {$paymentMode} | Payment Type: {$paymentType}</div>
-
-<div class='footer-wrapper'>
-  <div class='thank'>Thank You</div>
-  <div class='footer-header'>
-    <span>TERMS & CONDITIONS</span>
-    <span>ACCOUNT DETAILS</span>
-  </div>
-  <div class='footer-left'>
-    Payment is due within 2 days
-  </div>
-  <div class='footer-right'>
-    Softech18<br>
-    Ac- 243305002040<br>
-    IFSC-ICIC0002433<br>
-    ICICI Bank<br>
-    College square branch<br>
-    Cuttack
-  </div>
-  <div class='footer-bottom'>
-    Contact us: +91 9937857561 | visit us: www.softech18.com
-  </div>
-</div>
 ";
 
 $options = new Options();
