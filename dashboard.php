@@ -103,7 +103,7 @@ body.dark-mode .btn-close {
 <body>
 <div class="d-flex" id="wrapper">
 <!-- Sidebar -->
-<div class="border-end bg-white" id="sidebar-wrapper">
+<div class="border-end bg-white" id="sidebar-wrapper">+
   <div class="sidebar-heading border-bottom bg-light text-center py-4">
     <img src="companylog1.png" alt="Admin Photo" class="admin-photo" onerror="this.onerror=null;this.src='images/IMG_5672.JPG';">
     <div class="mt-2 fw-bold"><?php echo htmlspecialchars($_SESSION['user']); ?></div>
@@ -112,6 +112,7 @@ body.dark-mode .btn-close {
     <a class="list-group-item list-group-item-action list-group-item-light p-3" href="dashboard.php"><i class="fa-solid fa-gauge"></i> Dashboard</a>
     <a class="list-group-item list-group-item-action list-group-item-light p-3" href="add-client.php"><i class="fa-solid fa-user-plus"></i> Add Client</a>
     <a class="list-group-item list-group-item-action list-group-item-light p-3" href="client-list.php"><i class="fa-solid fa-users"></i> Client List</a>
+      <a class="list-group-item list-group-item-action list-group-item-light p-3" href="edit-client.php"><i class="fa-solid fa-file-invoice"></i> Edit Client List</a>
     <a class="list-group-item list-group-item-action list-group-item-light p-3" href="add-bill.php"><i class="fa-solid fa-file-invoice-dollar"></i> Add New Bill</a>
     <a class="list-group-item list-group-item-action list-group-item-light p-3" href="bill-history.php"><i class="fa-solid fa-clock-rotate-left"></i> Bill History</a>
     <a class="list-group-item list-group-item-action list-group-item-light p-3" href="add-recurring-bill.php"><i class="fa-solid fa-repeat"></i> Add Recurring Bill</a>

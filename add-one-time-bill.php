@@ -30,7 +30,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     foreach ($amounts as $index => $amt) {
         $amt = floatval($amt);
-        $desc = htmlspecialchars(trim($descriptions[$index]));
+        // Normalize description by replacing line breaks with spaces and trimming
+        $desc = htmlspecialchars(preg_replace('/\s+/', ' ', trim($descriptions[$index])));
         if ($amt > 0 && $desc != '') {
             $itemDetails[] = $desc . " (" . number_format($amt, 2) . ")";
             $totalAmount += $amt;

@@ -42,14 +42,23 @@ $subtotal = 0;
 $itemRows = '';
 foreach ($items as $item) {
     $item = trim($item);
-    preg_match('/^(.*)\(([\d,.]+)\)$/', $item, $matches);
-    $name = htmlspecialchars(trim($matches[1] ?? $item));
-    $price = isset($matches[2]) ? floatval(str_replace(',', '', $matches[2])) : 0;
-    $subtotal += $price;
-    $itemRows .= "<tr>
-                    <td>{$name}</td>
-                    <td style='text-align:right;'>" . number_format($price, 2) . "</td>
-                  </tr>";
+    // Updated regex to handle any characters in description
+    if (preg_match('/^(.+?)\s*\(([\d,.]+)\)$/', $item, $matches)) {
+        $name = htmlspecialchars(trim($matches[1]));
+        $price = floatval(str_replace(',', '', $matches[2]));
+        $subtotal += $price;
+        $itemRows .= "<tr>
+                        <td>{$name}</td>
+                        <td style='text-align:right;'>" . number_format($price, 2) . "</td>
+                      </tr>";
+    } else if (!empty($item)) {
+        // If no amount found, show item as description only
+        $name = htmlspecialchars($item);
+        $itemRows .= "<tr>
+                        <td>{$name}</td>
+                        <td style='text-align:right;'>-</td>
+                      </tr>";
+    }
 }
 
 // Totals

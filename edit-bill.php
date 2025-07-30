@@ -36,7 +36,8 @@ if (!empty($bill['description'])) {
     $items = preg_split('/,(?![^\(]*\))/', $bill['description']);
     foreach ($items as $item) {
         $item = trim($item);
-        if (preg_match('/^(.*)\(([\d,.]+)\)$/', $item, $matches)) {
+        // Updated regex to handle multi-line descriptions with DOTALL modifier
+        if (preg_match('/^(.+)\(([\d,.]+)\)$/s', $item, $matches)) {
             $existingItems[] = [
                 'desc' => trim($matches[1]),
                 'amount' => str_replace(',', '', $matches[2])
@@ -85,7 +86,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     foreach ($amounts as $index => $amt) {
         if (!empty($amt) && !empty($descriptions[$index])) {
             $amt = floatval($amt);
-            $desc = trim($descriptions[$index]);
+            // Normalize description by replacing line breaks with spaces and trimming
+            $desc = preg_replace('/\s+/', ' ', trim($descriptions[$index]));
             $totalAmount += $amt;
             $itemDetails[] = "$desc($amt)";
         }

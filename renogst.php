@@ -36,19 +36,34 @@ $bgPath = 'companylogo.jpg';
 $backgroundImage = file_exists($bgPath) ? base64_encode(file_get_contents($bgPath)) : '';
 $bgStyle = $backgroundImage ? "background: url('data:image/jpeg;base64,{$backgroundImage}') no-repeat center center; background-size: cover;" : '';
 
-// ✅ Parse description rows
+// ✅ Parse multiple items from description
 $rowsHtml = '';
-if (preg_match_all('/([a-zA-Z0-9\s]+)\s*\(([\d,.]+)\)/', $row['description'], $matches, PREG_SET_ORDER)) {
-    foreach ($matches as $match) {
-        $desc = htmlspecialchars(trim($match[1]));
-        $amt = number_format((float)str_replace(',', '', $match[2]), 2);
+$items = preg_split('/,(?![^\(]*\))/', $row['description']); // Split by comma, but not inside parentheses
+
+foreach ($items as $item) {
+    $item = trim($item);
+    // Match description followed by amount in parentheses
+    if (preg_match('/^(.+?)\s*\(([\d,.]+)\)$/', $item, $matches)) {
+        $desc = htmlspecialchars(trim($matches[1]));
+        $amt = number_format((float)str_replace(',', '', $matches[2]), 2);
         $rowsHtml .= "
         <tr>
             <td>{$desc}</td>
             <td style='text-align:right;'>{$amt}</td>
         </tr>";
+    } else if (!empty($item)) {
+        // If no amount found, show item as description only
+        $desc = htmlspecialchars($item);
+        $rowsHtml .= "
+        <tr>
+            <td>{$desc}</td>
+            <td style='text-align:right;'>-</td>
+        </tr>";
     }
-} else {
+}
+
+// If no items were parsed, show the full description
+if (empty($rowsHtml)) {
     $desc = htmlspecialchars($row['description']);
     $rowsHtml .= "
     <tr>
