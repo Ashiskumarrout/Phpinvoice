@@ -113,6 +113,8 @@ body.dark-mode .btn-close {
     <a class="list-group-item list-group-item-action list-group-item-light p-3" href="add-client.php"><i class="fa-solid fa-user-plus"></i> Add Client</a>
     <a class="list-group-item list-group-item-action list-group-item-light p-3" href="client-list.php"><i class="fa-solid fa-users"></i> Client List</a>
       <a class="list-group-item list-group-item-action list-group-item-light p-3" href="edit-client.php"><i class="fa-solid fa-file-invoice"></i> Edit Client List</a>
+    <a class="list-group-item list-group-item-action list-group-item-light p-3" href="proposalnew.php"><i class="fa-solid fa-file-contract"></i> Create Proposal</a>
+    <a class="list-group-item list-group-item-action list-group-item-light p-3" href="proposal-dashboard.php"><i class="fa-solid fa-chart-line"></i> Proposal Dashboard</a>
     <a class="list-group-item list-group-item-action list-group-item-light p-3" href="add-bill.php"><i class="fa-solid fa-file-invoice-dollar"></i> Add New Bill</a>
     <a class="list-group-item list-group-item-action list-group-item-light p-3" href="bill-history.php"><i class="fa-solid fa-clock-rotate-left"></i> Bill History</a>
     <a class="list-group-item list-group-item-action list-group-item-light p-3" href="add-recurring-bill.php"><i class="fa-solid fa-repeat"></i> Add Recurring Bill</a>
